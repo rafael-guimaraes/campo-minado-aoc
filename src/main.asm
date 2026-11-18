@@ -2,6 +2,9 @@
 mapa:       .byte 0:128             # negativo = bomba; 0 a 8 = bombas em volta
 estado:     .byte 0:128             # 0 = fechada; 1 = aberta
 cabecalho:  .asciiz "\n  A B C D E F G H I J K L M N O P\n"
+pede_jogada:  .asciiz "\nJogada: "
+msg_invalida: .asciiz "Jogada invalida\n"
+buffer:       .space 16
 
 .text
 .globl main
@@ -9,9 +12,27 @@ cabecalho:  .asciiz "\n  A B C D E F G H I J K L M N O P\n"
 main:
     jal colocar_minas
 
+jogo:
     jal imprimir_tabuleiro
-    li  $v0,10
+
+    jal ler_jogada
+    bltz $v0,jogada_invalida
+
+    move $s1,$v1
+    lb  $s2,estado($s1)
+
+jogada_abrir:
+    bnez $s2,jogada_invalida
+
+    li  $t0,1
+    sb  $t0,estado($s1)
+    j   jogo
+
+jogada_invalida:
+    li  $v0,4
+    la  $a0,msg_invalida
     syscall
+    j   jogo
 
 imprimir_tabuleiro:
     li  $v0,4
@@ -118,4 +139,38 @@ cm_pular:
     addi $t1,$t1,1
     blt  $t1,20,cm_sortear
 
+    jr  $ra
+
+ler_jogada:
+    li  $v0,4
+    la  $a0,pede_jogada
+    syscall
+
+    li  $v0,8
+    la  $a0,buffer
+    li  $a1,16
+    syscall
+
+    la  $t0,buffer
+    li  $v0,0
+
+lj_casa:
+    lb  $t4,0($t0)
+    lb  $t5,1($t0)
+    lb  $t6,2($t0)
+
+    bne  $t6,'\n',lj_invalida
+    blt  $t4,'A',lj_invalida
+    bgt  $t4,'P',lj_invalida
+    blt  $t5,'1',lj_invalida
+    bgt  $t5,'8',lj_invalida
+
+    addi $t4,$t4,-65
+    addi $t5,$t5,-49
+    sll  $v1,$t5,4
+    add  $v1,$v1,$t4
+    jr  $ra
+
+lj_invalida:
+    li  $v0,-1
     jr  $ra
