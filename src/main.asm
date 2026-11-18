@@ -21,6 +21,7 @@ jogo:
     move $s0,$v0
     move $s1,$v1
     lb  $s2,estado($s1)
+
     beq  $s0,1,jogada_bandeira
 
 jogada_abrir:
@@ -28,6 +29,8 @@ jogada_abrir:
 
     li  $t0,1
     sb  $t0,estado($s1)
+
+    jal abrir_em_massa
     j   jogo
 
 jogada_bandeira:
@@ -46,7 +49,6 @@ jogada_invalida:
     la  $a0,msg_invalida
     syscall
     j   jogo
-
 
 imprimir_tabuleiro:
     li  $v0,4
@@ -199,7 +201,57 @@ lj_casa:
     add  $v1,$v1,$t4
     jr  $ra
 
-
 lj_invalida:
     li  $v0,-1
+    jr  $ra
+
+abrir_em_massa:
+    li  $t1,0
+    li  $t0,0
+
+am_casa:
+    lb  $t2,estado($t0)
+    bne  $t2,1,am_proxima_casa
+
+    lb  $t2,mapa($t0)
+    bnez $t2,am_proxima_casa
+
+    srl  $t5,$t0,4
+    andi $t6,$t0,15
+
+    li  $t7,-1
+
+am_linha:
+    li  $t8,-1
+
+am_coluna:
+    add  $t9,$t5,$t7
+    bltz $t9,am_pular
+    bge  $t9,8,am_pular
+
+    add  $t2,$t6,$t8
+    bltz $t2,am_pular
+    bge  $t2,16,am_pular
+
+    sll  $t4,$t9,4
+    add  $t4,$t4,$t2
+    lb   $t3,estado($t4)
+    bnez $t3,am_pular
+
+    li  $t3,1                   # vizinha de casa 0 nunca e bomba, pode abrir direto
+    sb  $t3,estado($t4)
+    li  $t1,1
+
+am_pular:
+    addi $t8,$t8,1
+    ble  $t8,1,am_coluna
+
+    addi $t7,$t7,1
+    ble  $t7,1,am_linha
+
+am_proxima_casa:
+    addi $t0,$t0,1
+    blt  $t0,128,am_casa
+
+    bnez $t1,abrir_em_massa
     jr  $ra
