@@ -1,6 +1,6 @@
 .data
 mapa:       .byte 0:128             # negativo = bomba; 0 a 8 = bombas em volta
-estado:     .byte 0:128             # 0 = fechada; 1 = aberta
+estado:     .byte 0:128             # 0 = fechada; 1 = aberta; 2 = bandeira
 cabecalho:  .asciiz "\n  A B C D E F G H I J K L M N O P\n"
 pede_jogada:  .asciiz "\nJogada: "
 msg_invalida: .asciiz "Jogada invalida\n"
@@ -18,8 +18,10 @@ jogo:
     jal ler_jogada
     bltz $v0,jogada_invalida
 
+    move $s0,$v0
     move $s1,$v1
     lb  $s2,estado($s1)
+    beq  $s0,1,jogada_bandeira
 
 jogada_abrir:
     bnez $s2,jogada_invalida
@@ -28,11 +30,23 @@ jogada_abrir:
     sb  $t0,estado($s1)
     j   jogo
 
+jogada_bandeira:
+    beq  $s2,1,jogada_invalida
+
+    li  $t0,2
+    beqz $s2,guardar_bandeira
+    li  $t0,0
+
+guardar_bandeira:
+    sb  $t0,estado($s1)
+    j   jogo
+
 jogada_invalida:
     li  $v0,4
     la  $a0,msg_invalida
     syscall
     j   jogo
+
 
 imprimir_tabuleiro:
     li  $v0,4
@@ -58,6 +72,9 @@ it_coluna:
 
     li  $a0,'#'
     beqz $t3,it_imprime
+
+    li  $a0,'F'
+    beq  $t3,2,it_imprime
 
     lb  $t3,mapa($t2)
 
@@ -154,6 +171,17 @@ ler_jogada:
     la  $t0,buffer
     li  $v0,0
 
+    lb  $t2,2($t0)
+    beq  $t2,'\n',lj_casa
+
+    lb  $t2,0($t0)
+    addi $t0,$t0,1
+
+    li  $v0,1
+    beq  $t2,'F',lj_casa
+
+    j   lj_invalida
+
 lj_casa:
     lb  $t4,0($t0)
     lb  $t5,1($t0)
@@ -170,6 +198,7 @@ lj_casa:
     sll  $v1,$t5,4
     add  $v1,$v1,$t4
     jr  $ra
+
 
 lj_invalida:
     li  $v0,-1
