@@ -5,13 +5,12 @@ cabecalho:  .asciiz "\n  A B C D E F G H I J K L M N O P\n"
 pede_jogada:  .asciiz "\nJogada: "
 msg_invalida: .asciiz "Jogada invalida\n"
 buffer:       .space 16
+minas_prontas: .word 0
 
 .text
 .globl main
 
 main:
-    jal colocar_minas
-
 jogo:
     jal imprimir_tabuleiro
 
@@ -27,6 +26,16 @@ jogo:
 jogada_abrir:
     bnez $s2,jogada_invalida
 
+    lw  $t0,minas_prontas
+    bnez $t0,abrir_casa
+
+    move $a0,$s1
+    jal colocar_minas
+
+    li  $t0,1
+    sw  $t0,minas_prontas
+
+abrir_casa:
     li  $t0,1
     sb  $t0,estado($s1)
 
@@ -110,6 +119,7 @@ it_imprime:
     jr  $ra
 
 colocar_minas:
+    move $t0,$a0
     li  $t1,0
 
 cm_sortear:
@@ -122,11 +132,24 @@ cm_sortear:
     lb  $t4,mapa($t3)
     bltz $t4,cm_sortear
 
-    li  $t4,-9
-    sb  $t4,mapa($t3)
-
     srl  $t5,$t3,4
     andi $t6,$t3,15
+
+    srl  $t7,$t0,4
+    sub  $t7,$t5,$t7
+    blt  $t7,-1,cm_longe
+    bgt  $t7,1,cm_longe
+
+    andi $t8,$t0,15
+    sub  $t8,$t6,$t8
+    blt  $t8,-1,cm_longe
+    bgt  $t8,1,cm_longe
+
+    j   cm_sortear                  # caiu em volta da primeira jogada
+
+cm_longe:
+    li  $t4,-9
+    sb  $t4,mapa($t3)
 
     li  $t7,-1
 
